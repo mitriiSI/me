@@ -275,33 +275,49 @@ export class MetroMap {
     for (const rail of this.network.rails) {
       const points = [screens.get(rail.from), screens.get(rail.to)];
       this.path(points,'#091522',highlight ? 7 : 8);
-      this.path(points,rail.color+(highlight ? '8c' : 'dc'),highlight ? 3.3 : 4.3);
+      this.path(points,rail.color+(highlight ? '64' : 'dc'),highlight ? 3.1 : 4.3);
     }
     for (const group of this.network.transfers) {
       const start = screens.get(group[0]);
       for (const id of group.slice(1)) this.path([start,screens.get(id)],highlight ? '#a8bbd075' : '#afc3d5b0',1.55);
     }
-    if (highlight) {
-      for (const edge of this.route.segments) {
-        const points = [screens.get(edge.from),screens.get(edge.to)];
-        this.path(points,'#b7f66726',15);
-        this.path(points,'#0f2218',8);
-        this.path(points,edge.transfer ? '#e5efca' : '#d9f995',edge.transfer ? 3 : 4.5);
+    const routeSegments = highlight ? this.route.segments.map(edge => ({
+      points: [screens.get(edge.from),screens.get(edge.to)],
+      color: this.network.stations.get(edge.from).line.color,
+      transfer: edge.transfer,
+    })) : [];
+    for (const { points, color, transfer } of routeSegments) {
+      this.path(points,transfer ? '#d7e3f12e' : color+'3f',15);
+      this.path(points,'#091522',10);
+    }
+    for (const { points, color, transfer } of routeSegments) {
+      if (transfer) {
+        ctx.setLineDash([4, 5]);
+        this.path(points,'#d7e3f1',3);
+        ctx.setLineDash([]);
+      } else {
+        this.path(points,color,6);
       }
     }
 
     const stationRadius = this.scale < 22 ? 2.35 : 3.3;
     const visible = (p, pad = 8) => p.x >= pad && p.x <= width-pad && p.y >= pad && p.y <= height-pad;
     for (const [id,p] of screens) {
-      if (!visible(p, 0)) continue;
+      if (!visible(p, 0) || routeIds.has(id)) continue;
       const s = this.network.stations.get(id);
-      const onRoute = routeIds.has(id);
-      const end = onRoute && (id === this.route.first || id === this.route.last);
-      const via = onRoute && this.route.via.has(id);
-      if (id === this.current || id === this.hover || end) this.dot(p,end ? 11 : 9,'#dbfb9638');
-      if (onRoute) this.dot(p,end ? 6.9 : via || s.transfer ? 5.1 : 4,end ? '#d9f995' : '#192821','#d9f995',2);
-      else if (s.transfer) this.dot(p,stationRadius+0.8,'#203142',highlight ? '#a9bace' : '#d7e3ef',1.4);
+      if (id === this.current || id === this.hover) this.dot(p,9,s.line.color+'48');
+      if (s.transfer) this.dot(p,stationRadius+0.8,'#203142',highlight ? '#a9bace' : '#d7e3ef',1.4);
       else this.dot(p,stationRadius,'#172637',s.line.color+(highlight ? 'ba' : 'ff'),1.5);
+    }
+    for (const id of routeIds) {
+      const p = screens.get(id);
+      if (!visible(p, 0)) continue;
+      const station = this.network.stations.get(id);
+      const color = station.line.color;
+      const end = id === this.route.first || id === this.route.last;
+      const key = this.route.via.has(id) || station.transfer;
+      if (end || id === this.current || id === this.hover) this.dot(p,end ? 12 : 9,color+'56');
+      this.dot(p,end ? 7 : key ? 5.3 : 4.2,end ? color : '#142030',end ? '#e3ebf5' : color,2);
     }
 
     const labels = [];
@@ -353,8 +369,8 @@ export class MetroMap {
       blocked.push(label);
       drawnNames.add(s.name);
       if (chip) {
-        ctx.fillStyle = '#202e2b';
-        ctx.strokeStyle = '#6d874e';
+        ctx.fillStyle = '#172431';
+        ctx.strokeStyle = s.line.color+'cb';
         ctx.lineWidth = 1;
         ctx.beginPath();
         if (ctx.roundRect) ctx.roundRect(label.x,label.y,label.w,label.h,6);
@@ -369,7 +385,7 @@ export class MetroMap {
         ctx.strokeStyle = '#142030dc';
         ctx.strokeText(name,textX,textY);
       }
-      ctx.fillStyle = chip ? '#e9fbc7' : type === 'network' ? '#aab9cc' : '#edf1df';
+      ctx.fillStyle = type === 'network' ? '#aab9cc' : '#f1f4f8';
       ctx.fillText(name,textX,textY);
     }
 

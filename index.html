@@ -11,7 +11,7 @@
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="apple-touch-icon" href="./assets/icon-192.png">
   <link rel="icon" href="./assets/icon-192.png">
-  <link rel="stylesheet" href="./style.css?v=3">
+  <link rel="stylesheet" href="./style.css?v=4">
   <title>Метросигнал — маршрут по метро</title>
 </head>
 <body>
@@ -125,7 +125,7 @@
         <p id="map-message" class="map-message" role="status" hidden></p>
       </div>
       <div class="map-legend">
-        <span><i class="legend-route"></i>Маршрут</span>
+        <span><i class="legend-route" id="route-legend" aria-hidden="true"></i>Маршрут</span>
         <span><i class="legend-station"></i>Станция</span>
         <span><i class="legend-transfer"></i>Пересадка</span>
         <button type="button" id="lines-button">Все линии <svg class="icon"><use href="#i-chevron"/></svg></button>
@@ -146,6 +146,6 @@
     </div>
   </dialog>
   <noscript>Для построения маршрута включите JavaScript в браузере.</noscript>
-  <script type="module" src="./app.mjs?v=3"></script>
+  <script type="module" src="./app.mjs?v=4"></script>
 </body>
 </html>

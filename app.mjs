@@ -1,7 +1,7 @@
-import { distance, makeRoute, prepareNetwork, stationNear } from './network.mjs?v=3';
-import { MetroMap } from './map.mjs?v=3';
-import { imminentAlert, nextEstimatedStop, positionOnJourney, stationTime, syncJourneyTime } from './journey.mjs?v=3';
-import { setupOffline } from './offline.mjs?v=3';
+import { distance, makeRoute, prepareNetwork, stationNear } from './network.mjs?v=4';
+import { MetroMap } from './map.mjs?v=4';
+import { imminentAlert, nextEstimatedStop, positionOnJourney, stationTime, syncJourneyTime } from './journey.mjs?v=4';
+import { setupOffline } from './offline.mjs?v=4';
 
 const $ = id => document.getElementById(id);
 const icon = name => `<svg class="icon" aria-hidden="true"><use href="#i-${name}"></use></svg>`;
@@ -10,6 +10,7 @@ const fold = value => String(value).toLocaleLowerCase('ru').replace(/ё/g,'е').
 const storageKey = 'metro-signal-settings-v1';
 const importKey = 'metro-signal-custom-v1';
 const maxVia = 8;
+const alarmSpacingMs = 2_000;
 const read = (key, fallback) => {
   try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; }
 };
@@ -21,7 +22,7 @@ const sounds = { arrival: true, transfer: true, other: true, ...preferences.soun
 let networks;
 let custom = read(importKey, []);
 if (!Array.isArray(custom)) custom = [];
-let network, fields, route, ride, pendingMapMessage, audio;
+let network, fields, route, ride, pendingMapMessage, audio, alarmVolume;
 const modal = $('modal');
 const modalContent = $('modal-content');
 const map = new MetroMap($('metro-map'), openMapStation);
@@ -69,7 +70,7 @@ function renderFields() {
     const hint = key === 'from' ? 'Выбрать станцию отправления' : key === 'to' ? 'Выбрать станцию назначения' : 'Выбрать промежуточную станцию';
     const via = !['from','to'].includes(key);
     return `<div class="station-field"><button class="pick-button" type="button" data-field="${key}" aria-haspopup="dialog" aria-label="${fieldLabel(key)}: ${station ? escape(station.name) : hint}">
-      <i class="field-dot ${key === 'to' ? 'end' : via ? 'via' : ''}" aria-hidden="true"></i>
+      <i class="field-dot ${key === 'to' ? 'end' : via ? 'via' : ''}" ${station ? `style="--station-color:${station.line.color}"` : ''} aria-hidden="true"></i>
       <span><span class="pick-label">${fieldLabel(key)}</span><span class="pick-value ${station ? '' : 'empty'}">${station ? escape(station.name) : 'Выбрать станцию'}</span></span>
       ${station ? lineTag(station.line) : icon('chevron')}</button>
       ${via ? `<button class="remove-via" type="button" data-remove="${key}" aria-label="Убрать промежуточную станцию ${Number(key)+1}">${icon('close')}</button>` : ''}
@@ -94,7 +95,22 @@ function updateRoute() {
   renderSummary();
   map.setRoute(route);
   updateMapMode();
+  renderRouteLegend();
   remember();
+}
+
+function renderRouteLegend() {
+  const legend = $('route-legend');
+  const travel = route?.segments.filter(edge => !edge.transfer) ?? [];
+  const stations = travel.length ? travel.map(edge => edge.from) : route?.stops.flatMap(stop => stop.ids) ?? [];
+  const colors = [...new Set(stations.map(id => network.stations.get(id).line.color))];
+  if (colors.length < 2) {
+    legend.style.background = colors[0] ?? '';
+    return;
+  }
+  const stops = colors.map((color, index) =>
+    `${color} ${index * 100 / colors.length}% ${(index + 1) * 100 / colors.length}%`);
+  legend.style.background = `linear-gradient(90deg, ${stops.join(', ')})`;
 }
 
 function plural(number, forms) {
@@ -120,9 +136,12 @@ function renderSummary() {
     if (stop.ids.includes(route.first) && stop === stops[0]) note = 'Старт';
     if (stop.ids.includes(route.last) && stop === stops.at(-1)) note = 'Финиш';
     if (!note && stop.ids.some(id => route.via.has(id))) note = 'Через';
-    const line = network.stations.get(stop.ids.at(-1)).line;
-    return `<li class="${stop.transfer ? 'transfer' : ''}"><i class="station-dot"></i><span class="route-list-label">${escape(stopName(stop))}</span>
-      ${note ? `<span class="route-list-detail">${note}</span>` : ''}${full ? lineTag(line) : ''}</li>`;
+    const arrivalLine = network.stations.get(stop.ids[0]).line;
+    const departureLine = network.stations.get(stop.transferTo ?? stop.ids.at(-1)).line;
+    const trackColor = stop.transferTo ? '#8594a7' : departureLine.color;
+    return `<li class="${stop.transfer ? 'transfer' : ''}" style="--arrival-color:${arrivalLine.color};--departure-color:${departureLine.color};--track-color:${trackColor}">
+      <i class="station-dot" aria-hidden="true"></i><span class="route-list-label">${escape(stopName(stop))}</span>
+      ${note ? `<span class="route-list-detail">${note}</span>` : ''}${full ? lineTag(departureLine) : ''}</li>`;
   }).join('');
   $('route-preview').innerHTML = `<ol class="route-summary-list">${render(preview,false)}</ol>`;
   $('route-details').innerHTML = `<ol class="route-stop-list">${render(stops,true)}</ol>`;
@@ -320,28 +339,51 @@ function unlockAudio() {
   try {
     const Context = window.AudioContext ?? window.webkitAudioContext;
     if (!Context) return;
-    if (!audio || audio.state === 'closed') audio = new Context();
+    if (!audio || audio.state === 'closed') {
+      audio = new Context();
+      alarmVolume = null;
+    }
     if (audio.state !== 'running') audio.resume().catch(() => {});
   } catch { /* The audio test exposes unsupported playback. */ }
 }
 
 function playSignal(type) {
   if (!audio || audio.state !== 'running') return false;
-  const frequencies = type === 'arrival' ? [659.25,830.61,987.77] : [880,698.46,880];
-  const start = audio.currentTime + 0.015;
-  frequencies.forEach((frequency,index) => {
-    const oscillator = audio.createOscillator();
-    const volume = audio.createGain();
-    const begin = start + index*(type === 'arrival' ? 0.19 : 0.24);
-    oscillator.type = 'sine';
-    oscillator.frequency.value = frequency;
-    volume.gain.setValueAtTime(0,begin);
-    volume.gain.linearRampToValueAtTime(0.21,begin+0.024);
-    volume.gain.exponentialRampToValueAtTime(0.004,begin+0.17);
-    oscillator.connect(volume).connect(audio.destination);
-    oscillator.start(begin);
-    oscillator.stop(begin+0.19);
-  });
+  const now = audio.currentTime;
+  if (alarmVolume) {
+    alarmVolume.gain.cancelScheduledValues(now);
+    alarmVolume.gain.setTargetAtTime(0, now, 0.008);
+  }
+  const isArrival = type === 'arrival';
+  const notes = isArrival ? [880, 1109, 1319] : [660, 880];
+  const interval = isArrival ? 0.16 : 0.21;
+  const pulse = isArrival ? 0.13 : 0.17;
+  const start = now + 0.015;
+  const oscillator = audio.createOscillator();
+  const volume = audio.createGain();
+  alarmVolume = volume;
+  oscillator.type = 'triangle';
+  volume.gain.value = 0;
+  oscillator.connect(volume).connect(audio.destination);
+  let end = start;
+  for (const burst of [0, 0.68, 1.36]) {
+    notes.forEach((frequency, index) => {
+      const begin = start + burst + index * interval;
+      end = begin + pulse;
+      oscillator.frequency.setValueAtTime(frequency, begin);
+      volume.gain.setValueAtTime(0, begin);
+      volume.gain.linearRampToValueAtTime(0.25, begin + 0.012);
+      volume.gain.exponentialRampToValueAtTime(0.002, end - 0.012);
+      volume.gain.linearRampToValueAtTime(0, end);
+    });
+  }
+  oscillator.onended = () => {
+    oscillator.disconnect();
+    volume.disconnect();
+    if (alarmVolume === volume) alarmVolume = null;
+  };
+  oscillator.start(start);
+  oscillator.stop(end);
   return true;
 }
 
@@ -353,7 +395,7 @@ async function testSound(type, status) {
 }
 
 function showSounds() {
-  showModal('Звуковые сигналы', `<p class="modal-copy">Подключи наушники и послушай сигналы перед поездкой.</p>
+  showModal('Звуковые сигналы', `<p class="modal-copy">Подключи наушники и послушай сигналы. У пересадки и конечной разные серии звонков.</p>
     <label class="switch-row">Прибытие на конечную <input type="checkbox" data-sound="arrival" ${sounds.arrival ? 'checked' : ''}></label>
     <label class="switch-row">Пересадки по маршруту <input type="checkbox" data-sound="transfer" ${sounds.transfer ? 'checked' : ''}></label>
     <label class="switch-row">Другие пересадочные станции <input type="checkbox" data-sound="other" ${sounds.other ? 'checked' : ''}></label>
@@ -522,7 +564,7 @@ function tickRide(activeRide) {
   const now = Date.now();
   updateRideDisplay(now);
   const warning = imminentAlert(ride, now, alertType);
-  if (!warning || now - (ride.signalledAt ?? 0) < 900) return;
+  if (!warning || now - (ride.signalledAt ?? 0) < alarmSpacingMs) return;
   const stop = ride.route.stops[warning.index];
   const station = network.stations.get(warning.type === 'arrival' ? ride.route.last : stop.ids[0]);
   let message;
