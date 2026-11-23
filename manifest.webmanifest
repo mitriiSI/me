@@ -1,0 +1,16 @@
+{
+  "id": "./",
+  "lang": "ru",
+  "name": "Метросигнал",
+  "short_name": "Метросигнал",
+  "description": "Схемы метро, маршруты и сигналы в наушниках.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#10151d",
+  "theme_color": "#10151d",
+  "icons": [
+    {"src": "./assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "./assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+  ]
+}
