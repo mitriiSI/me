@@ -1,9 +1,9 @@
-const cacheName = 'metro-signal-2026-11-23-5';
+const cacheName = 'metro-signal-2026-11-23-6';
 const base = self.registration.scope;
 const index = new URL('./index.html', base).href;
 const shell = [
-  './index.html', './style.css?v=5', './app.mjs?v=5', './map.mjs?v=5',
-  './network.mjs?v=5', './journey.mjs?v=5', './offline.mjs?v=5', './manifest.webmanifest',
+  './index.html', './style.css?v=6', './app.mjs?v=6', './map.mjs?v=6',
+  './network.mjs?v=6', './journey.mjs?v=6', './offline.mjs?v=6', './manifest.webmanifest',
   './assets/networks.json', './assets/map-template.json', './assets/manrope-lat.woff2',
   './assets/manrope-cyr.woff2', './assets/icon-192.png', './assets/icon-512.png',
 ].map(path => new URL(path, base).href);

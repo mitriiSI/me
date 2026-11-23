@@ -1,7 +1,7 @@
-import { distance, makeRoute, prepareNetwork, stationNear } from './network.mjs?v=5';
-import { MetroMap } from './map.mjs?v=5';
-import { imminentAlert, nextEstimatedStop, positionOnJourney, stationTime, syncJourneyTime } from './journey.mjs?v=5';
-import { setupOffline } from './offline.mjs?v=5';
+import { distance, makeRoute, prepareNetwork, stationNear } from './network.mjs?v=6';
+import { MetroMap } from './map.mjs?v=6';
+import { imminentAlert, nextEstimatedStop, positionOnJourney, stationTime, syncJourneyTime } from './journey.mjs?v=6';
+import { setupOffline } from './offline.mjs?v=6';
 
 const $ = id => document.getElementById(id);
 const icon = name => `<svg class="icon" aria-hidden="true"><use href="#i-${name}"></use></svg>`;
