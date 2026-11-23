@@ -11,12 +11,11 @@
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="apple-touch-icon" href="./assets/icon-192.png">
   <link rel="icon" href="./assets/icon-192.png">
-  <link rel="stylesheet" href="./style.css?v=4">
+  <link rel="stylesheet" href="./style.css?v=5">
   <title>Метросигнал — маршрут по метро</title>
 </head>
 <body>
   <svg xmlns="http://www.w3.org/2000/svg" hidden aria-hidden="true">
-    <symbol id="i-logo" viewBox="0 0 24 24"><path d="m3 15.5 4.1-8.8 4.9 8.1 4.9-8.1 4.1 8.8M7.5 19h9"/></symbol>
     <symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 5-8 10.5-8 10.5S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></symbol>
     <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
     <symbol id="i-swap" viewBox="0 0 24 24"><path d="M8 19V5m-4 4 4-4 4 4m4-4v14m-4-4 4 4 4-4"/></symbol>
@@ -28,27 +27,17 @@
     <symbol id="i-map" viewBox="0 0 24 24"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3Zm6-3v15m6-12v15"/></symbol>
     <symbol id="i-locate" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 2v3m0 14v3M2 12h3m14 0h3"/></symbol>
     <symbol id="i-fit" viewBox="0 0 24 24"><path d="M9 4H4v5m11-5h5v5M4 15v5h5m11-5v5h-5"/></symbol>
-    <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6m0-10v.1"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></symbol>
     <symbol id="i-train" viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="15" rx="4"/><path d="M5 11h14M9 18l-2 3m8-3 2 3M9 15h.01M15 15h.01"/></symbol>
     <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
     <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
     <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="5.5"/><path d="m15 15 4.5 4.5"/></symbol>
     <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4.5 4.5L19 7"/></symbol>
     <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4m-4 4 4-4 4 4M4 16v4h16v-4"/></symbol>
-    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 4v11m-4-4 4 4 4-4M4 16v4h16v-4"/></symbol>
-    <symbol id="i-phone" viewBox="0 0 24 24"><rect x="6.5" y="2.5" width="11" height="19" rx="2.5"/><path d="M11 18h2"/></symbol>
     <symbol id="i-navigation" viewBox="0 0 24 24"><path d="m19.5 4.5-5.2 15-3.2-6.6-6.6-3.2z"/></symbol>
   </svg>
   <header class="topbar">
     <div class="topbar-inner">
-      <a class="brand" href="./" aria-label="Метросигнал, на главную">
-        <span class="brand-mark"><svg class="icon"><use href="#i-logo"/></svg></span>
-        <span>Метросигнал<small>НАВИГАТОР МЕТРО</small></span>
-      </a>
-      <nav class="top-nav" aria-label="Разделы">
-        <button class="nav-current" type="button" id="nav-route"><svg class="icon"><use href="#i-route"/></svg>Маршрут</button>
-        <button type="button" data-help><svg class="icon"><use href="#i-info"/></svg>Как работает</button>
-      </nav>
       <button id="city-button" class="city-button" type="button" aria-haspopup="dialog">
         <svg class="icon"><use href="#i-pin"/></svg><span id="city-label">Москва</span><svg class="icon chevron"><use href="#i-chevron"/></svg>
       </button>
@@ -56,15 +45,11 @@
   </header>
 
   <main class="workspace" id="workspace">
-    <section class="planner" id="planner" aria-labelledby="planner-title">
-      <div class="intro">
-        <h1 id="planner-title">Твой маршрут</h1>
-        <p>Построй поездку и услышь, когда пора выходить.</p>
-      </div>
+    <section class="planner" aria-labelledby="plan-title">
       <div class="trip-stack">
         <section class="panel plan-card" aria-labelledby="plan-title">
           <div class="card-heading">
-            <h2 id="plan-title">План поездки</h2>
+            <h1 id="plan-title">План поездки</h1>
             <button id="swap-button" class="icon-button" title="Развернуть маршрут" aria-label="Развернуть маршрут" type="button"><svg class="icon"><use href="#i-swap"/></svg></button>
           </div>
           <div id="route-fields" class="route-fields"></div>
@@ -91,11 +76,6 @@
           <span><strong>Звуковые сигналы</strong><small id="sound-caption">Пересадки и прибытие</small></span>
           <svg class="icon sound-chevron"><use href="#i-chevron"/></svg>
         </button>
-        <button class="offline-button" id="offline-button" type="button" aria-describedby="offline-status">
-          <span id="offline-icon"><svg class="icon"><use href="#i-download"/></svg></span>
-          <span id="offline-label">Скачать для офлайна</span>
-        </button>
-        <p class="offline-status" id="offline-status" role="status"></p>
       </div>
     </section>
 
@@ -108,11 +88,12 @@
         </div>
         <div class="map-heading-actions">
           <button type="button" class="map-mode" id="map-mode"><svg class="icon"><use href="#i-route"/></svg><span id="map-mode-label">Мой маршрут</span></button>
+          <button type="button" class="map-lines icon-button" id="lines-button" aria-label="Все линии" title="Все линии" aria-haspopup="dialog"><svg class="icon"><use href="#i-list"/></svg></button>
           <button type="button" class="map-expand" id="map-expand" aria-label="Развернуть схему" aria-haspopup="dialog"><svg class="icon"><use href="#i-fit"/></svg><span>Развернуть</span></button>
         </div>
       </div>
       <div class="map-stage" id="map-stage" aria-label="Интерактивная схема метро">
-        <canvas id="metro-map" aria-label="Схема линий метро. Станции также доступны через выбор маршрута."></canvas>
+        <canvas id="metro-map" aria-label="Схема линий метро. Для изменения масштаба сведи или разведи два пальца."></canvas>
         <span class="map-compass" aria-hidden="true"><svg class="icon"><use href="#i-navigation"/></svg><span>С</span></span>
         <div class="map-tools" aria-label="Управление схемой">
           <div class="map-zoom">
@@ -124,20 +105,10 @@
         </div>
         <p id="map-message" class="map-message" role="status" hidden></p>
       </div>
-      <div class="map-legend">
-        <span><i class="legend-route" id="route-legend" aria-hidden="true"></i>Маршрут</span>
-        <span><i class="legend-station"></i>Станция</span>
-        <span><i class="legend-transfer"></i>Пересадка</span>
-        <button type="button" id="lines-button">Все линии <svg class="icon"><use href="#i-chevron"/></svg></button>
-      </div>
     </section>
     </div>
   </main>
   <dialog id="map-dialog" aria-labelledby="map-title"></dialog>
-  <footer class="footer">
-    <span><svg class="icon"><use href="#i-info"/></svg>Без геолокации приложение предупреждает по расчётному времени. Станцию можно подтвердить вручную.</span>
-    <button type="button" data-help><svg class="icon"><use href="#i-phone"/></svg>Добавить на iPhone</button>
-  </footer>
 
   <dialog id="modal" aria-labelledby="modal-title">
     <div class="modal-inner">
@@ -146,6 +117,6 @@
     </div>
   </dialog>
   <noscript>Для построения маршрута включите JavaScript в браузере.</noscript>
-  <script type="module" src="./app.mjs?v=4"></script>
+  <script type="module" src="./app.mjs?v=5"></script>
 </body>
 </html>

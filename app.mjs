@@ -1,7 +1,7 @@
-import { distance, makeRoute, prepareNetwork, stationNear } from './network.mjs?v=4';
-import { MetroMap } from './map.mjs?v=4';
-import { imminentAlert, nextEstimatedStop, positionOnJourney, stationTime, syncJourneyTime } from './journey.mjs?v=4';
-import { setupOffline } from './offline.mjs?v=4';
+import { distance, makeRoute, prepareNetwork, stationNear } from './network.mjs?v=5';
+import { MetroMap } from './map.mjs?v=5';
+import { imminentAlert, nextEstimatedStop, positionOnJourney, stationTime, syncJourneyTime } from './journey.mjs?v=5';
+import { setupOffline } from './offline.mjs?v=5';
 
 const $ = id => document.getElementById(id);
 const icon = name => `<svg class="icon" aria-hidden="true"><use href="#i-${name}"></use></svg>`;
@@ -95,22 +95,7 @@ function updateRoute() {
   renderSummary();
   map.setRoute(route);
   updateMapMode();
-  renderRouteLegend();
   remember();
-}
-
-function renderRouteLegend() {
-  const legend = $('route-legend');
-  const travel = route?.segments.filter(edge => !edge.transfer) ?? [];
-  const stations = travel.length ? travel.map(edge => edge.from) : route?.stops.flatMap(stop => stop.ids) ?? [];
-  const colors = [...new Set(stations.map(id => network.stations.get(id).line.color))];
-  if (colors.length < 2) {
-    legend.style.background = colors[0] ?? '';
-    return;
-  }
-  const stops = colors.map((color, index) =>
-    `${color} ${index * 100 / colors.length}% ${(index + 1) * 100 / colors.length}%`);
-  legend.style.background = `linear-gradient(90deg, ${stops.join(', ')})`;
 }
 
 function plural(number, forms) {
@@ -316,17 +301,6 @@ function showImport() {
       status.hidden = false;
     }
   };
-}
-
-function openHelp() {
-  showModal('Как работает Метросигнал', `<div class="modal-copy">
-    <p><strong>Поездка.</strong> Нажми «Начать поездку», когда поезд тронется. Сигнал звучит примерно за минуту до пересадки и конечной. Приложение уточняет время по геопозиции, а без неё считает по перегонам. После задержки можно выбрать текущую станцию и уточнить отсчёт.</p>
-    <p><strong>В метро.</strong> Оставь приложение открытым. При блокировке экрана iPhone может приостановить отсчёт и звук.</p>
-    <p><strong>Офлайн.</strong> При подключении к интернету нажми «Скачать для офлайна» и дождись подтверждения. Схемы сохраняются в кэше браузера.</p>
-    <p><strong>Наушники.</strong> Подключи их к iPhone и проверь оба сигнала в настройках звука.</p>
-    <p><strong>На экран «Домой».</strong> В Safari открой «Поделиться», нажми «На экран “Домой”» и выбери «Открывать как веб-приложение», если есть такой переключатель.</p>
-    <p><strong>Данные.</strong> <a href="https://api.hh.ru/openapi/redoc#tag/Obshie-spravochniki/operation/get-metro-stations" target="_blank" rel="noreferrer">Справочник HH</a> и <a href="https://volgtrans.ru/index.php?id=ST2&amp;start=tram" target="_blank" rel="noreferrer">маршрут СТ2</a>. В Москве доступны метро и МЦК. В Петербурге из маршрутов исключены Фрунзенская и Парк Победы, <a href="https://metro.spb.ru/remeskltr.html" target="_blank" rel="noreferrer">закрытые на реконструкцию</a>. Время в пути примерное. Схемы не учитывают оперативные закрытия. Геопозиция обрабатывается на устройстве.</p>
-  </div>`);
 }
 
 function updateSoundCaption() {
@@ -777,8 +751,6 @@ $('start-trip').onclick = startRide;
 $('sound-button').onclick = () => { if (network) showSounds(); };
 $('lines-button').onclick = showLines;
 $('city-button').onclick = () => { if (network) showCities(); };
-$('nav-route').onclick = () => $('planner').scrollIntoView({block:'nearest'});
-document.querySelectorAll('[data-help]').forEach(button => { button.onclick = openHelp; });
 $('map-expand').onclick = toggleMap;
 mapDialog.addEventListener('close', restoreMap);
 $('map-mode').onclick = () => {
@@ -803,7 +775,7 @@ document.addEventListener('visibilitychange',() => {
 });
 
 updateSoundCaption();
-setupOffline($('offline-button'), $('offline-label'), $('offline-icon'), $('offline-status'));
+setupOffline();
 $('add-via').disabled = true;
 $('swap-button').disabled = true;
 $('map-mode').disabled = true;

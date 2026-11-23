@@ -1,9 +1,9 @@
-const cacheName = 'metro-signal-2026-11-23-4';
+const cacheName = 'metro-signal-2026-11-23-5';
 const base = self.registration.scope;
 const index = new URL('./index.html', base).href;
 const shell = [
-  './index.html', './style.css?v=4', './app.mjs?v=4', './map.mjs?v=4',
-  './network.mjs?v=4', './journey.mjs?v=4', './offline.mjs?v=4', './manifest.webmanifest',
+  './index.html', './style.css?v=5', './app.mjs?v=5', './map.mjs?v=5',
+  './network.mjs?v=5', './journey.mjs?v=5', './offline.mjs?v=5', './manifest.webmanifest',
   './assets/networks.json', './assets/map-template.json', './assets/manrope-lat.woff2',
   './assets/manrope-cyr.woff2', './assets/icon-192.png', './assets/icon-512.png',
 ].map(path => new URL(path, base).href);
@@ -34,14 +34,16 @@ self.addEventListener('activate', event => {
   event.waitUntil(self.clients.claim());
 });
 self.addEventListener('message', event => {
-  if (!event.ports[0] || !['offline-status','offline-download'].includes(event.data?.type)) return;
+  const type = event.data?.type;
+  const port = event.ports[0];
+  if (type !== 'offline-download' && !(type === 'offline-status' && port)) return;
   event.waitUntil((async () => {
     try {
-      const ready = event.data.type === 'offline-download' ? await downloadAssets()
+      const ready = type === 'offline-download' ? await downloadAssets()
         : (await missingAssets(await caches.open(cacheName))).length === 0;
-      event.ports[0].postMessage({ ready });
+      port?.postMessage({ ready });
     } catch {
-      event.ports[0].postMessage({ ready: false });
+      port?.postMessage({ ready: false });
     }
   })());
 });

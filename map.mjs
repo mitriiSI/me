@@ -40,6 +40,14 @@ export class MetroMap {
     for (const type of ['pointerup','pointercancel','lostpointercapture']) {
       canvas.addEventListener(type, event => this.pointerEnd(event));
     }
+    for (const type of ['touchstart', 'touchmove']) {
+      canvas.addEventListener(type, event => this.handlePinch(event), { passive: false });
+    }
+    for (const type of ['touchend', 'touchcancel']) {
+      canvas.addEventListener(type, event => {
+        if (event.targetTouches.length < 2) this.pinch = null;
+      });
+    }
     canvas.addEventListener('pointerleave', event => {
       if (!this.interactive) this.pointers.delete(event.pointerId);
       this.hover = null;
@@ -57,6 +65,7 @@ export class MetroMap {
   setInteractive(enabled) {
     this.interactive = enabled;
     this.pointers.clear();
+    this.pinch = null;
     this.canvas.classList.remove('dragging');
   }
 
@@ -80,6 +89,7 @@ export class MetroMap {
 
   setView(view) {
     this.view = view;
+    this.manuallyPositioned = false;
     this.fit();
   }
 
@@ -93,7 +103,7 @@ export class MetroMap {
     this.canvas.width = Math.round(width * ratio);
     this.canvas.height = Math.round(height * ratio);
     this.ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-    if (first || this.view !== 'free') this.fit();
+    if (first || !this.manuallyPositioned) this.fit();
     else this.scheduleDraw();
   }
 
@@ -128,7 +138,7 @@ export class MetroMap {
       this.cx = this.position.x;
       this.cy = this.position.y;
       this.scale = Math.max(this.scale, 100);
-      this.view = 'free';
+      this.manuallyPositioned = true;
     }
     this.scheduleDraw();
   }
@@ -138,18 +148,41 @@ export class MetroMap {
     this.scheduleDraw();
   }
 
-  zoom(factor, x = this.width / 2, y = this.height / 2) {
+  zoom(factor, x = this.width / 2, y = this.height / 2, targetX = x, targetY = y) {
     const next = Math.max(2, Math.min(450,this.scale * factor));
-    this.cx += (x - this.width / 2) * (1 / this.scale - 1 / next);
-    this.cy += (y - this.height / 2) * (1 / this.scale - 1 / next);
+    this.cx += (x - this.width / 2) / this.scale - (targetX - this.width / 2) / next;
+    this.cy += (y - this.height / 2) / this.scale - (targetY - this.height / 2) / next;
     this.scale = next;
-    this.view = 'free';
+    this.manuallyPositioned = true;
     this.scheduleDraw();
   }
 
   local(event) {
     const rect = this.canvas.getBoundingClientRect();
     return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+  }
+
+  handlePinch(event) {
+    const first = event.targetTouches[0];
+    const second = event.targetTouches[1];
+    if (!second || !this.network) return;
+    // Reserve the two-finger gesture and leave one-finger scrolling to the browser.
+    if (event.cancelable) event.preventDefault();
+    this.moved = true;
+    const rect = this.canvas.getBoundingClientRect();
+    const a = first.identifier < second.identifier ? first : second;
+    const b = a === first ? second : first;
+    const previous = this.pinch;
+    const current = this.pinch = {
+      first: a.identifier,
+      second: b.identifier,
+      x: (a.clientX + b.clientX) / 2 - rect.left,
+      y: (a.clientY + b.clientY) / 2 - rect.top,
+      distance: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY),
+    };
+    if (!previous || previous.first !== current.first || previous.second !== current.second
+      || previous.distance < 8 || current.distance < 8) return;
+    this.zoom(current.distance / previous.distance, previous.x, previous.y, current.x, current.y);
   }
 
   pointerDown(event) {
@@ -174,19 +207,13 @@ export class MetroMap {
       return;
     }
     if (Math.hypot(current.x - old.startX, current.y - old.startY) > 5) this.moved = true;
-    if (!this.moved || !this.interactive) return;
-    this.canvas.classList.add('dragging');
-    const other = [...this.pointers].find(([id]) => id !== event.pointerId)?.[1];
-    if (other) {
-      const oldDistance = Math.hypot(old.x - other.x, old.y - other.y);
-      const newDistance = Math.hypot(current.x - other.x, current.y - other.y);
-      if (oldDistance > 8 && newDistance > 8) this.zoom(newDistance / oldDistance, (old.x+other.x)/2, (old.y+other.y)/2);
-    }
-    const divisor = other ? 2 : 1;
-    this.cx -= (current.x - old.x) / (this.scale * divisor);
-    this.cy -= (current.y - old.y) / (this.scale * divisor);
-    this.view = 'free';
     this.pointers.set(event.pointerId, { ...old, ...current });
+    if (!this.moved || !this.interactive) return;
+    if (event.pointerType === 'touch' && (this.pinch || this.pointers.size > 1)) return;
+    this.canvas.classList.add('dragging');
+    this.cx -= (current.x - old.x) / this.scale;
+    this.cy -= (current.y - old.y) / this.scale;
+    this.manuallyPositioned = true;
     this.scheduleDraw();
   }
 
